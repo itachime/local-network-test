@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>本地网络请求测试</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-2: #eef2f6;
+      --text: #12161f;
+      --muted: #657082;
+      --line: #dbe1ea;
+      --primary: #136f63;
+      --primary-2: #e4f4f0;
+      --danger: #b42318;
+      --danger-2: #fde7e6;
+      --ok: #087443;
+      --ok-2: #def7ec;
+      --warn: #946200;
+      --warn-2: #fff2c7;
+      --shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101419;
+        --panel: #181e25;
+        --panel-2: #222a33;
+        --text: #eef2f6;
+        --muted: #a2adbc;
+        --line: #303a46;
+        --primary: #48c4ae;
+        --primary-2: #123b35;
+        --danger: #ff8b7e;
+        --danger-2: #471d1b;
+        --ok: #55d49a;
+        --ok-2: #123b2a;
+        --warn: #f5c451;
+        --warn-2: #3c3010;
+        --shadow: none;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .page {
+      width: min(100%, 920px);
+      margin: 0 auto;
+      padding: calc(18px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .status-dot {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 32px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .status-dot::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .status-dot.ok::before {
+      background: var(--ok);
+    }
+
+    .section {
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .env-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .env-item {
+      min-height: 64px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+    }
+
+    .env-label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .env-value {
+      display: block;
+      margin-top: 5px;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .url-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      outline: none;
+    }
+
+    input {
+      min-height: 46px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+    }
+
+    textarea {
+      min-height: 72px;
+      resize: vertical;
+      padding: 10px 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .button-row,
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-row {
+      margin-top: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1.2;
+      user-select: none;
+    }
+
+    .btn.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+      font-weight: 650;
+    }
+
+    .btn.subtle {
+      background: var(--primary-2);
+      border-color: color-mix(in srgb, var(--primary) 26%, var(--line));
+      color: var(--primary);
+    }
+
+    .btn.icon {
+      min-width: 42px;
+      padding: 8px;
+      font-size: 18px;
+    }
+
+    .btn:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .chip {
+      max-width: 100%;
+      min-height: 36px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+      text-align: left;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 42px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .check input {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--primary);
+    }
+
+    .result {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .result + .result {
+      margin-top: 10px;
+    }
+
+    .result-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 11px;
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .result-url {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.pending {
+      color: var(--warn);
+      background: var(--warn-2);
+    }
+
+    .badge.success {
+      color: var(--ok);
+      background: var(--ok-2);
+    }
+
+    .badge.error {
+      color: var(--danger);
+      background: var(--danger-2);
+    }
+
+    .result-body {
+      padding: 11px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .meta span {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      border-radius: 8px;
+      background: #0f1720;
+      color: #e7edf5;
+      padding: 11px;
+      font-size: 12px;
+      line-height: 1.45;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    details + details {
+      margin-top: 8px;
+    }
+
+    summary {
+      min-height: 42px;
+      padding: 10px 12px;
+      cursor: pointer;
+      color: var(--text);
+      font-weight: 650;
+      font-size: 13px;
+    }
+
+    .help {
+      padding: 0 12px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .help code {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .toast {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: calc(14px + env(safe-area-inset-bottom));
+      z-index: 20;
+      display: none;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(18, 22, 31, 0.92);
+      color: #fff;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .toast.show {
+      display: flex;
+    }
+
+    @media (max-width: 540px) {
+      .page {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .topbar {
+        display: block;
+      }
+
+      .status-dot {
+        margin-top: 10px;
+      }
+
+      .env-grid,
+      .options {
+        grid-template-columns: 1fr;
+      }
+
+      .url-row {
+        grid-template-columns: 1fr;
+      }
+
+      .btn {
+        flex: 1 1 auto;
+      }
+
+      .btn.icon {
+        flex: 0 0 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <h1>本地网络请求测试</h1>
+        <p class="subtitle">用于手机浏览器验证 Lovense 本地接口、Local Network Access 权限、CORS 与混合内容拦截情况。</p>
+      </div>
+      <div id="secureState" class="status-dot">环境检查中</div>
+    </header>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>运行环境</h2>
+        <div class="button-row">
+          <button class="btn icon" id="toggleEnv" type="button" title="折叠运行环境" aria-expanded="true">⌃</button>
+          <button class="btn icon" id="refreshEnv" type="button" title="刷新环境">↻</button>
+        </div>
+      </div>
+      <div class="grid env-grid" id="envGrid"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>请求测试</h2>
+        <button class="btn subtle" id="runAll" type="button">测试全部</button>
+      </div>
+
+      <div class="url-row">
+        <div>
+          <label for="urlInput">测试 URL</label>
+          <input id="urlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false">
+        </div>
+        <button class="btn primary" id="runOne" type="button">发送</button>
+      </div>
+
+      <div class="preset-row" id="presetRow"></div>
+
+      <div class="options">
+        <label class="check" for="useNoStore">
+          <input id="useNoStore" type="checkbox" checked>
+          <span>禁用缓存</span>
+        </label>
+        <label class="check" for="includeCreds">
+          <input id="includeCreds" type="checkbox">
+          <span>携带凭据</span>
+        </label>
+      </div>
+      <div style="margin-top: 10px;">
+        <label for="timeoutInput">请求超时（毫秒）</label>
+        <input id="timeoutInput" type="number" inputmode="numeric" min="1000" step="1000" value="8000">
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>结果</h2>
+        <div class="button-row">
+          <button class="btn" id="copyLog" type="button">复制日志</button>
+          <button class="btn" id="clearLog" type="button">清空</button>
+        </div>
+      </div>
+      <div id="results" class="empty">还没有请求结果。</div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>排查提示</h2>
+      </div>
+      <details open>
+        <summary>常见失败原因</summary>
+        <div class="help">
+          <div>如果报 <code>Failed to fetch</code>，通常是服务未启动、端口不可达、证书不被信任、CORS 未放行，或浏览器拦截了本地网络访问。</div>
+          <div>如果页面运行在 HTTPS 下访问 HTTP 地址，部分浏览器可能按混合内容策略拦截；可以同时对比 HTTPS 域名和 HTTP 127.0.0.1 两个默认接口。</div>
+          <div>如果页面嵌入在 iframe 中，外层 iframe 需要允许本地网络访问，例如添加 <code>allow="local-network-access"</code>。</div>
+        </div>
+      </details>
+      <details>
+        <summary>手机测试建议</summary>
+        <div class="help">
+          <div><code>127.0.0.1</code> 指向当前手机本机，不是电脑。如果本地服务跑在电脑上，手机需要访问电脑的局域网 IP，或使用文档中的可信转发域名。</div>
+          <div>首次请求可能触发浏览器权限提示；允许后再点一次测试，观察状态码和响应体。</div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const DEFAULT_URLS = [
+      "https://127-0-0-1.lovense.club:30010/GetToys",
+      "http://127.0.0.1:20010/GetToys"
+    ];
+
+    const state = {
+      logs: [],
+      requestId: 0,
+      busy: false
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+
+    const els = {
+      secureState: $("#secureState"),
+      envGrid: $("#envGrid"),
+      toggleEnv: $("#toggleEnv"),
+      refreshEnv: $("#refreshEnv"),
+      urlInput: $("#urlInput"),
+      presetRow: $("#presetRow"),
+      runOne: $("#runOne"),
+      runAll: $("#runAll"),
+      useNoStore: $("#useNoStore"),
+      includeCreds: $("#includeCreds"),
+      timeoutInput: $("#timeoutInput"),
+      results: $("#results"),
+      copyLog: $("#copyLog"),
+      clearLog: $("#clearLog"),
+      toast: $("#toast")
+    };
+
+    function nowText() {
+      const date = new Date();
+      const pad = (value) => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 1800);
+    }
+
+    function formatBytes(text) {
+      const bytes = new Blob([text]).size;
+      if (bytes < 1024) return `${bytes} B`;
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    function getShortError(error) {
+      const message = error && error.message ? error.message : String(error);
+      if (/Failed to fetch|NetworkError|Load failed/i.test(message)) {
+        return `${message}\n\n可能原因：接口未启动、证书不被信任、CORS 未允许、Local Network Access 权限未通过，或当前页面的 HTTP/HTTPS 策略阻止了请求。`;
+      }
+      if (/abort|timeout|超时/i.test(message)) {
+        return `${message}\n\n请求已超时。请确认本地服务已启动、端口正确，并且手机访问的是目标设备本机或同网段 IP。`;
+      }
+      return message;
+    }
+
+    function safeUrl(value) {
+      try {
+        return new URL(value.trim()).href;
+      } catch (error) {
+        return "";
+      }
+    }
+
+    async function queryLocalNetworkPermission() {
+      if (!navigator.permissions || !navigator.permissions.query) {
+        return "Permissions API 不可用";
+      }
+      try {
+        const status = await navigator.permissions.query({ name: "local-network-access" });
+        return status.state || "未知";
+      } catch (error) {
+        return "浏览器未暴露";
+      }
+    }
+
+    async function collectEnv() {
+      const permission = await queryLocalNetworkPermission();
+      const currentUrl = location.href;
+      const origin = location.origin === "null" ? "file:// 或 opaque origin" : location.origin;
+      const ua = navigator.userAgent;
+      const isSecure = window.isSecureContext ? "是" : "否";
+      const protocol = location.protocol || "未知";
+      const online = navigator.onLine ? "在线" : "离线";
+
+      els.secureState.textContent = window.isSecureContext ? "安全上下文" : "非安全上下文";
+      els.secureState.classList.toggle("ok", Boolean(window.isSecureContext));
+
+      const rows = [
+        ["页面地址", currentUrl],
+        ["Origin", origin],
+        ["协议", protocol],
+        ["安全上下文", isSecure],
+        ["Local Network 权限", permission],
+        ["网络状态", online],
+        ["浏览器", ua]
+      ];
+
+      els.envGrid.innerHTML = rows.map(([label, value]) => `
+        <div class="env-item">
+          <span class="env-label">${escapeHtml(label)}</span>
+          <span class="env-value">${escapeHtml(value)}</span>
+        </div>
+      `).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function setBusy(value) {
+      state.busy = value;
+      els.runOne.disabled = value;
+      els.runAll.disabled = value;
+    }
+
+    function toggleEnv() {
+      const collapsed = els.envGrid.hidden;
+      els.envGrid.hidden = !collapsed;
+      els.toggleEnv.textContent = collapsed ? "⌃" : "⌄";
+      els.toggleEnv.title = collapsed ? "折叠运行环境" : "展开运行环境";
+      els.toggleEnv.setAttribute("aria-expanded", String(collapsed));
+    }
+
+    function createResultShell(url) {
+      const id = `result-${++state.requestId}`;
+      if (els.results.classList.contains("empty")) {
+        els.results.classList.remove("empty");
+        els.results.innerHTML = "";
+      }
+
+      const node = document.createElement("article");
+      node.className = "result";
+      node.id = id;
+      node.innerHTML = `
+        <div class="result-head">
+          <div class="result-url">${escapeHtml(url)}</div>
+          <span class="badge pending">请求中</span>
+        </div>
+        <div class="result-body">
+          <div class="meta">
+            <span>${escapeHtml(nowText())}</span>
+          </div>
+          <pre>等待响应...</pre>
+        </div>
+      `;
+      els.results.prepend(node);
+      return node;
+    }
+
+    function renderResult(node, data) {
+      const badge = node.querySelector(".badge");
+      const meta = node.querySelector(".meta");
+      const pre = node.querySelector("pre");
+      const ok = data.ok;
+
+      badge.className = `badge ${ok ? "success" : "error"}`;
+      badge.textContent = data.label;
+      meta.innerHTML = data.meta.map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+      pre.textContent = data.body;
+    }
+
+    async function testUrl(url) {
+      const normalizedUrl = safeUrl(url);
+      if (!normalizedUrl) {
+        showToast("URL 格式不正确");
+        return;
+      }
+
+      const node = createResultShell(normalizedUrl);
+      const started = performance.now();
+      const headers = {};
+      const timeout = Math.max(1000, Number(els.timeoutInput.value) || 8000);
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(new Error(`请求超时：${timeout} ms`)), timeout);
+
+      try {
+        const response = await fetch(normalizedUrl, {
+          method: "GET",
+          cache: els.useNoStore.checked ? "no-store" : "default",
+          credentials: els.includeCreds.checked ? "include" : "omit",
+          signal: controller.signal
+        });
+        window.clearTimeout(timer);
+        const duration = Math.round(performance.now() - started);
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+        const text = await response.text();
+        let body = text || "(空响应体)";
+
+        try {
+          body = JSON.stringify(JSON.parse(text), null, 2);
+        } catch (error) {
+          body = text || "(空响应体)";
+        }
+
+        const log = {
+          time: nowText(),
+          url: normalizedUrl,
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+          duration,
+          size: formatBytes(text),
+          headers,
+          body
+        };
+        state.logs.unshift(log);
+
+        renderResult(node, {
+          ok: response.ok,
+          label: `${response.status}`,
+          meta: [
+            log.time,
+            `${duration} ms`,
+            log.size,
+            response.type ? `type: ${response.type}` : "",
+            response.redirected ? "redirected" : ""
+          ].filter(Boolean),
+          body: `${body}\n\n--- headers ---\n${JSON.stringify(headers, null, 2)}`
+        });
+      } catch (error) {
+        window.clearTimeout(timer);
+        const duration = Math.round(performance.now() - started);
+        const body = getShortError(error);
+        const log = {
+          time: nowText(),
+          url: normalizedUrl,
+          ok: false,
+          error: body,
+          duration
+        };
+        state.logs.unshift(log);
+
+        renderResult(node, {
+          ok: false,
+          label: "失败",
+          meta: [log.time, `${duration} ms`],
+          body
+        });
+      }
+    }
+
+    async function runOne() {
+      if (state.busy) return;
+      setBusy(true);
+      try {
+        await testUrl(els.urlInput.value);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function runAll() {
+      if (state.busy) return;
+      setBusy(true);
+      try {
+        const urls = Array.from(new Set([
+          ...DEFAULT_URLS,
+          els.urlInput.value.trim()
+        ].filter(Boolean)));
+        for (const url of urls) {
+          await testUrl(url);
+        }
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function copyLog() {
+      if (!state.logs.length) {
+        showToast("没有可复制的日志");
+        return;
+      }
+      const text = JSON.stringify({
+        page: location.href,
+        userAgent: navigator.userAgent,
+        createdAt: nowText(),
+        logs: state.logs
+      }, null, 2);
+
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("日志已复制");
+      } catch (error) {
+        showToast("复制失败，请长按结果手动选择");
+      }
+    }
+
+    function clearLog() {
+      state.logs = [];
+      els.results.className = "empty";
+      els.results.textContent = "还没有请求结果。";
+    }
+
+    function renderPresets() {
+      els.presetRow.innerHTML = DEFAULT_URLS.map((url) => `
+        <button class="chip" type="button" data-url="${escapeHtml(url)}">${escapeHtml(url)}</button>
+      `).join("");
+    }
+
+    function bindEvents() {
+      els.runOne.addEventListener("click", runOne);
+      els.runAll.addEventListener("click", runAll);
+      els.toggleEnv.addEventListener("click", toggleEnv);
+      els.refreshEnv.addEventListener("click", collectEnv);
+      els.copyLog.addEventListener("click", copyLog);
+      els.clearLog.addEventListener("click", clearLog);
+      els.urlInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          runOne();
+        }
+      });
+      els.presetRow.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-url]");
+        if (!button) return;
+        els.urlInput.value = button.dataset.url;
+        els.urlInput.focus();
+      });
+      window.addEventListener("online", collectEnv);
+      window.addEventListener("offline", collectEnv);
+    }
+
+    function init() {
+      els.urlInput.value = DEFAULT_URLS[0];
+      renderPresets();
+      bindEvents();
+      collectEnv();
+    }
+
+    init();
+  </script>
+</body>
+</html>
